@@ -107,7 +107,7 @@ namespace KeepWaiting
         static void ShowBanner()
         {
             Console.WriteLine("   _----------------------------------------------------------_");
-            Console.WriteLine("  ||------+ KeepWaiting -- HTTP/1.1 Denial of Service +------||");
+            Console.WriteLine("  ||------+ KeepWaiting --- HTTP/1.1 Denial of Service +------||");
             Console.WriteLine("  ||__________________________________________________________||");
             Console.WriteLine("  ||--=[                                                  ]=--||");
             Console.WriteLine("  ||--=[ Jeffrey L. Roberts / @phpDevOps / Nov 22th, 2014 ]=--||");
