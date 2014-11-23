@@ -42,6 +42,9 @@ namespace KeepWaiting
 
         static void Main(string[] args)
         {
+            args = new string[1];
+            args[0] = "http://drops.weaponsgrade.net/image1.jpg";
+
             ShowBanner();
             
             if (args.Length != 1 || args[0].Contains("http://") == false || args[0].Replace("http://", "").Contains("/") == false)
@@ -365,15 +368,29 @@ namespace KeepWaiting
             sRequest = sRequest + "Accept-Language: en-US,en;q=0.8\r\n" + sCacheHeader + "\r\n\r\n";
             bRequest = System.Text.ASCIIEncoding.ASCII.GetBytes(sRequest);
 
-            System.Threading.Thread.Sleep(10000);
-
-            client.Send(bRequest);
+            try
+            {
+                client.Send(bRequest);
+            }
+            catch (Exception ex)
+            {
+                fireNewThreadNeeded();
+                thread.Abort();
+            }
 
             sHeaderResponse = GetHeaderResponse(ref client);
 
             while (sHeaderResponse.Contains("304 Not Modified") == true)
             {
-                client.Send(bRequest);
+                try
+                {
+                    client.Send(bRequest);
+                }
+                catch (Exception ex)
+                {
+                    fireNewThreadNeeded();
+                    thread.Abort();
+                }
 
                 sHeaderResponse = GetHeaderResponse(ref client);
 
